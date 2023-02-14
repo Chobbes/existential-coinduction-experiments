@@ -1,3 +1,4 @@
+(* begin hide *)
 From ITree Require Import
      ITree
      ITreeFacts
@@ -28,7 +29,6 @@ From ITree Require Import
 
 From ExistentialCoinduction Require Import
   PropT.
-
 Require Import Paco.paco.
 
 Import ListNotations.
@@ -38,16 +38,19 @@ Import MonadNotation.
 Import CatNotations.
 Local Open Scope monad_scope.
 Local Open Scope cat_scope.
+(* end hide *)
 
-Definition handler_correct {E F} (h_spec: E ~> PropT F) (h: E ~> itree F) :=
-  (forall T e ta, ta ≈ h T e -> h_spec T e ta).
+(* Definition 5.3: Handler Correctness *)
+  Definition handler_correct {E F} (h_spec: E ~> PropT F) (h: E ~> itree F) :=
+    (forall T e ta, ta ≈ h T e -> h_spec T e ta).
 
 #[global] Instance void1_unit {E} : void1 -< E.
   repeat intro; contradiction.
 Qed.
 
 Section interp_prop.
-  Context {E F : Type -> Type}.
+
+  Context {E F OOM : Type -> Type} {OOME: OOM -< E}.
   Context (h_spec : E ~> PropT F) {R1 R2 : Type} (RR : R1 -> R2 -> Prop).
 
   Inductive interp_PropTF
@@ -68,6 +71,10 @@ Section interp_prop.
                           (CHECK: is_true b2)
                           (HS: interp_PropTF b1 b2 sim t1 (observe t2)),
       interp_PropTF b1 b2 sim t1 (TauF t2)
+
+  | Interp_PropT_Vis_OOM : forall A (e : OOM A) k1 t1 t2
+                         (HT1: t1 ≅ vis e k1),
+      interp_PropTF b1 b2 sim (observe t1) t2
 
   | Interp_PropT_Vis : forall A e k1 k2 (ta t2 : itree F _)
                   (HK : forall (a : A), Returns a ta -> sim (k1 a) (k2 a)),
@@ -155,6 +162,7 @@ Section interp_prop.
       rewrite <- itree_eta in IHinterp_PropTF.
       punfold IHinterp_PropTF.
     - rewrite <- itree_eta. pstep; auto.
+    - rewrite HT1, <- itree_eta; pstep; econstructor; reflexivity.
     - pstep; eapply Interp_PropT_Vis; eauto.
       rewrite (itree_eta t2) in H0.
       rewrite H2 in H0. rewrite tau_eutt in H0; eauto.
@@ -176,6 +184,7 @@ Section interp_prop.
       specialize (IHinterp_PropTF _ eq_refl _ eq_refl).
       rewrite <- itree_eta in IHinterp_PropTF.
       punfold IHinterp_PropTF.
+    - rewrite itree_eta in HT1; rewrite H0 in HT1; eapply eqit_inv in HT1; contradiction.
   Qed.
 
   Lemma interp_prop_inv_tau (t0 : _ R1) t1:
@@ -257,6 +266,8 @@ Section interp_prop.
       eapply IHinterp_PropTF; eauto.
       constructor; eauto.
     - rewrite <- Heqi.
+      econstructor; eauto.
+    - rewrite <- Heqi.
 
       rewrite Heqi0 in EQ.
       rewrite itree_eta in H0.
@@ -314,6 +325,15 @@ Section interp_prop.
           intros; left; pclearbot; eapply paco2_mon; eauto; intros; inv PR0.
         * remember (VisF e k1) as ot.
           hinduction HS before CIH; intros; try discriminate; eauto.
+          -- pose proof @Interp_PropT_Vis.
+              inversion Heqot.
+              rewrite itree_eta in HT1; rewrite Heqot in HT1.
+              eapply eqit_inv in HT1. cbn in HT1. destruct HT1 as (?&?&?).
+              subst. cbn in *. inv H0.
+              match goal with
+              | |- interp_PropTF _ _ _  ?l _ => change l with (observe (go l))
+              end.
+              eapply Interp_PropT_Vis_OOM; reflexivity.
           -- inv Heqot.
              dependent destruction H3. econstructor.
              2, 3: eauto.
@@ -331,11 +351,19 @@ Section interp_prop.
       punfold H0.
     - rewrite <- Heqi0.
       constructor; auto. eapply IHinterp_PropTF; eauto.
+    - rewrite <- Heqi0. rewrite itree_eta in HT1.
+      hinduction EQ before CIH; intros; try inversion Heqi1; pclearbot;
+        subst; eauto; apply eqit_inv in HT1; try inv HT1.
+      destruct H as (?&?). cbn in *. inv H.
+      match goal with
+      | |- interp_PropTF _ _ _  ?l _ => change l with (observe (go l))
+      end.
+      eapply Interp_PropT_Vis_OOM; reflexivity.
     - rewrite Heqi in EQ.
       hinduction EQ before CIH; intros; try inversion Heqi1; pclearbot; inv Heqi.
       + dependent destruction H3.
         econstructor; eauto.
-        intros. specialize (HK a H1); pclearbot.
+        intros. specialize (HK _ H1); pclearbot.
         right; eapply CIH; [ | punfold HK].
         specialize (REL a).
         punfold REL. setoid_rewrite itree_eta at 1 ; rewrite <- Heqi0, <- itree_eta; auto.
@@ -360,14 +388,14 @@ Hint Resolve interp_PropT__mono : paco.
 Hint Resolve interp_PropT_idclo_mono : paco.
 
 #[global] Instance interp_prop_Proper_eq :
-  forall (E F : Type -> Type) (h_spec : forall T : Type, E T -> PropT F T)
-    R (RR : R -> R -> Prop) (HR: Reflexive RR) (HT : Transitive RR),
-    Proper (@eutt _ _ _ RR ==> eq ==> flip Basics.impl) (@interp_prop E F h_spec _ _ RR).
+  forall (E F OOM : Type -> Type) (h_spec : forall T : Type, E T -> PropT F T)
+    R (RR : R -> R -> Prop) (HR: Reflexive RR) (HT : Transitive RR) `{OOM -< E},
+    Proper (@eutt _ _ _ RR ==> eq ==> flip Basics.impl) (@interp_prop E F OOM _ h_spec _ _ RR).
 Proof.
-  intros E F h_spec R RR REFL TRANS.
+  intros E F OOM h_spec R RR REFL TRANS CONSTRAINT.
   intros y y' EQ x x' EQ' H. subst.
   punfold H; punfold EQ; red in H; red in EQ; cbn in *.
-  revert_until TRANS.
+  revert_until CONSTRAINT.
   pcofix CIH.
   intros x x' EQ y H.
   remember (observe x); remember (observe y).
@@ -405,18 +433,28 @@ Proof.
         hinduction HS before r1; intros; inv Heqot.
         -- econstructor; eauto.
         -- econstructor; eauto.
+        -- rewrite itree_eta in HT1; rewrite H0 in HT1; apply eqit_inv in HT1; inv HT1.
       * remember (VisF e k2) as ot.
         hinduction HS before CIH; intros; try discriminate; eauto.
+        -- pose proof @Interp_PropT_Vis.
+            inversion Heqot.
+            rewrite itree_eta in HT1; rewrite Heqot in HT1.
+            eapply eqit_inv in HT1. cbn in HT1. destruct HT1 as (?&?&?).
+            subst. cbn in *. inv H0.
+            match goal with
+            | |- interp_PropTF _ _ _ _ _  ?l _ => change l with (observe (go l))
+            end.
+            eapply Interp_PropT_Vis_OOM; reflexivity.
         -- inv Heqot.
             dependent destruction H3. econstructor.
             2, 3: eauto.
             intros. right.
             eapply CIH; eauto.
             specialize (REL a). pclearbot. punfold REL.
-            specialize (HK a H1). pclearbot.
+            specialize (HK _ H1). pclearbot.
             punfold HK.
       * eapply IHREL; eauto. pstep_reverse.
-        assert (@interp_prop E F h_spec _ _ RR (Tau t2) t0) by (pstep; auto).
+        assert (interp_prop h_spec RR (Tau t2) t0 (OOME:=CONSTRAINT)) by (pstep; auto).
         apply interp_prop_inv_tau_l in H. punfold H.
   - specialize (IHinterp_PropTF _ Heqi _ Heqi0).
     assert (eutt RR (go xo) t1).
@@ -424,12 +462,21 @@ Proof.
     punfold H0.
   - rewrite <- Heqi0.
     constructor; auto.
+  - rewrite <- Heqi0. rewrite itree_eta in HT1. rewrite <- Heqi.
+    clear x Heqi.
+    hinduction EQ before CIH; intros; try inversion Heqi1; pclearbot;
+      subst; eauto; apply eqit_inv in HT1; try inv HT1.
+    destruct H as (?&?). cbn in *. inv H.
+      match goal with
+      | |- interp_PropTF _ _ _ _ _ ?l _ => change l with (observe (go l))
+      end.
+      eapply Interp_PropT_Vis_OOM; subst. reflexivity.
   - rewrite Heqi in EQ.
     remember (VisF e k1).
     hinduction EQ before CIH; intros; try inversion Heqi1; pclearbot; inv Heqi.
     + dependent destruction H3.
       econstructor; eauto.
-      intros. specialize (HK a H1); pclearbot.
+      intros. specialize (HK _ H1); pclearbot.
       right; eapply CIH; [ | punfold HK].
       specialize (REL a).
       punfold REL. setoid_rewrite itree_eta at 1 ; rewrite <- Heqi0, <- itree_eta; auto.
@@ -438,14 +485,14 @@ Qed.
 
 Section interp_prop_extra.
 
-  Context {E F : Type -> Type}.
+  Context {E F OOM : Type -> Type} {OOME: OOM -< E}.
   Context (h : E ~> PropT F).
   Context {R1 R2 : Type} (RR : R1 -> R2 -> Prop).
 
   Lemma interp_prop_clo_bind {U} t1 t2 k1 k2
-        (EQT: @interp_prop E F h U _ eq t1 t2)
-        (EQK: forall u1 u2, eq u1 u2 -> @interp_prop E F h _ _ eq (k1 u1) (k2 u2)):
-    @interp_prop E F h _ _ eq (ITree.bind t1 k1) (ITree.bind (U := U) t2 k2).
+        (EQT: @interp_prop E F OOM _ h U _ eq t1 t2)
+        (EQK: forall u1 u2, eq u1 u2 -> @interp_prop E F OOM _ h _ _ eq (k1 u1) (k2 u2)):
+    @interp_prop E F OOM _ h _ _ eq (ITree.bind t1 k1) (ITree.bind (U := U) t2 k2).
   Proof.
     revert_until U.
 
@@ -485,21 +532,32 @@ Section interp_prop_extra.
       eauto.
     - econstructor; auto.
     - econstructor; auto.
+    - eapply Interp_PropT_Vis_OOM with (e := e).
+      punfold HT1; red in HT1. remember (observe (vis e k0)).
+      hinduction HT1 before U; intros; inv Heqi; try inv CHECK.
+      dependent destruction H1. unfold subevent.
+      eapply eqit_Vis.
+      Unshelve.
+      2 : exact (fun a => bind (k0 a) k1).
+      intros. cbn.
+      eapply eq_itree_clo_bind; pclearbot; eauto.
+      apply REL.
+      intros; subst; reflexivity.
     - eapply Interp_PropT_Vis; eauto.
       intros; eauto. right. eapply CIH; eauto.
-      specialize (HK a H1). pclearbot. eapply HK; eauto.
+      specialize (HK _ H1). pclearbot. eapply HK; eauto.
       rewrite <- unfold_bind.
       setoid_rewrite <- Eqit.bind_bind.
       eapply eutt_clo_bind; eauto. intros; eauto. subst; reflexivity.
   Qed.
 
   Lemma interp_prop_mono:
-    forall RR RR' t1 t2,
+    forall (R : Type) RR RR' t1 t2,
       (RR <2= RR') ->
-      @interp_prop E F h _ _ RR t1 t2 ->
-      @interp_prop E F h R1 R2 RR' t1 t2.
+      interp_prop h RR t1 t2 (OOME:=OOME) ->
+      interp_prop h (F := F) (R1 := R1) (R2 := R2) RR' t1 t2 (OOME:=OOME).
   Proof.
-    intros ? ?.
+    intros ? ? ?.
     pcofix self. pstep. intros u v ? euv. punfold euv.
     red in euv |- *. induction euv; pclearbot; eauto 7 with paco.
     econstructor; eauto.
@@ -510,7 +568,7 @@ Section interp_prop_extra.
   (* Figure 7: Interpreter law for Ret *)
   Lemma interp_prop_ret :
     forall R (r : R),
-      (@interp_prop E F h R R eq (ret r) ≈ ret r)%monad.
+      (interp_prop (F := F) (OOME:=OOME) h eq (ret r) ≈ ret r)%monad.
   Proof.
     intros.
     repeat red.
@@ -526,6 +584,7 @@ Section interp_prop_extra.
         * eapply IHinterp_PropTF; eauto.
           assert (Tau t2 ≈ y) by (pstep; auto). rewrite tau_eutt in H1.
           punfold H1; auto.
+        * rewrite itree_eta in HT1; rewrite H1 in HT1; apply eqit_inv in HT1; contradiction.
       + do 2 red in H0. rewrite <- H in H0. clear H.
         punfold H0; red in H0; cbn in H0.
         pstep; red; cbn.
@@ -539,8 +598,8 @@ Section interp_prop_extra.
 
   Lemma interp_prop_bind_refine:
       forall (t : itree E R1) (k : R1 -> itree E R2) (y : itree F R2),
-        (x0 <- @interp_prop E F h _ _ eq t;; @interp_prop E F h _ _ eq (k x0)) y ->
-        @interp_prop E F h _ _ eq (x <- t;; k x) y.
+        (x0 <- interp_prop (OOME:=OOME) h eq t;; interp_prop (OOME:=OOME) h eq (k x0)) y ->
+        interp_prop (OOME:=OOME) h eq (x <- t;; k x) y.
   Proof.
     intros t k y H0.
     destruct H0 as (x0&x1&?&?&?).
@@ -548,7 +607,7 @@ Section interp_prop_extra.
     rename x0 into t', x1 into k'.
     setoid_rewrite unfold_bind.
     match goal with
-    | |- @interp_prop E F h _ _ ?l ?r => remember l; remember r
+    | |- interp_prop _ _ ?l ?r => remember l; remember r
     end.
     revert_until RR. pcofix CIH. intros.
     red in H0.
