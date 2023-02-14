@@ -18,12 +18,12 @@
           (self: super:
             { ITree = super.ITree.overrideAttrs
                 (s : rec
-                  { version = "5.0.0";
+                  { version = "5.1.0";
                     name = "coq8.16-InteractionTrees-${version}";
                     src = fetchTarball {
                       # Version with rutt theory and mrec rutt theory.
-                      url = "https://github.com/DeepSpec/InteractionTrees/archive/9c1637ea57d1afcef587eb438438c73247639c0e.zip";
-                      sha256 = "sha256:0hcwplpaj2gx6c2abyp3w4g83hzvjnzfsh1sl9kfhd0r3pb9biar";
+                      url = "https://github.com/DeepSpec/InteractionTrees/archive/a1492ea5bcf9375414fcafec6b3d6a32d615ecd9.zip";
+                      sha256 = "sha256:1spr98f5k9m3h16wjlajrs6w6gl0j6c39r1r2zi00n50aa5wqblz";
                     };
                     meta.broken = false;
                   });

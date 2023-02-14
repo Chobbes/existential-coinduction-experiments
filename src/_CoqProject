@@ -1,3 +1,4 @@
 -R . ExistentialCoinduction
 ./Main.v
 ./PropT.v
+./InterpProp.v

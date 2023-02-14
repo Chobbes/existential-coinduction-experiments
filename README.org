@@ -1,0 +1,139 @@
+* Introduction
+
+I'm trying to work on a proof involving two related interaction trees
+which represent the behavior of programs in two slightly different
+languages in the context of non-determinism.
+
+The gist is that each of these languages have a slightly different set
+of values, and so the events in the itrees end up having different
+types. In this repository I have a paired down example of this. One
+language has values in ~Nat~, and the other language has values in
+~Bool~. We basically want to relate the ~Bool~ language programs to
+programs in the ~Nat~ language --- there may be more behaviours
+allowed in the ~Nat~ language, but the ~Nat~ language should be able
+to simulate the ~Bool~ language.
+
+In both of these languages we have non-deterministic events
+represented by ~Or~ events in the ~itree~. These events return a bool
+in each language.p
+
+The ~Nat~ language and ~Bool~ language ~itrees~ differ in their event
+structure because the ~Nat~ language has ~NatEvents~ and the ~Bool~
+language has ~BoolEvents~. These are events which take a value from
+the respective language (~Nat~ or ~Bool~), and return some other value
+as a result.
+
+In this example we only interpret the ~Or~ events. Notably we
+interpret these events into ~PropT E X = itree E X -> Prop~, i.e.,
+when we interpret these non-deterministic events we get a set of
+~itree E X~, where each ~itree~ in the set represents the trace of the
+programs where specific choices have been made. E.g., if our tree was
+~Vis Or (b => ret b)~, then after interpretation we would get a set
+containing the trees ~ret true~ and ~ret false~.
+
+#+begin_src coq
+  (** * Handlers *)
+  Definition nondetE_handle {E} X (e : (nondetE +' E) X) : PropT E X
+    := match e with
+       | inl1 e' =>
+           match e' with
+           | Or =>
+               fun (t : itree E bool) => t = Ret true \/ t = Ret false
+           end
+       | inr1 e' => fun t => t ≈ @ITree.trigger E X e'
+       end.
+
+  (** * Interpreters *)
+  Definition runNat {X} (t : itree NatE X) : PropT NatEvent X
+    := interp_prop nondetE_handle eq t.
+
+  Definition runBool {X} (t : itree BoolE X) : PropT BoolEvent X
+    := interp_prop nondetE_handle eq t.
+#+end_src
+
+Our main theorem is as follows:
+
+#+begin_src coq
+  Lemma main :
+    forall t_nat t_bool,
+      rutt (@top_level_rel) (@top_level_rel_ans) nb t_nat t_bool ->
+      forall t_bool2, runBool t_bool t_bool2 ->
+                 exists t_nat2,
+                   runNat t_nat t_nat2 /\
+                     rutt (@event_rel') (@event_rel_ans') nb t_nat2 t_bool2.
+#+end_src
+
+I.e., if we have a ~Nat~ tree ~t_nat~ which is related to a ~Bool~
+tree ~t_bool~ with ~rutt~ (basically ~eutt~ between trees with
+different event structures), then we can get an "equivalent" ~Nat~ tree.
+
+Intuitively this makes sense. If ~t_nat~ is related to ~t_bool~ before
+interpreting the ~nondetE~ events, and I have a tree ~t_bool2~ that's
+the result of handling the ~nondetE~ events in ~t_bool~ and making a
+specific sequence of choices, then I should be able to construct a
+~t_nat2~ that makes the same sequence of choices. This ~t_nat2~ is the
+result of making specific choices from ~t_nat~, so ~runNat t_nat t_nat2~ should hold... And the ~rutt~ relation should hold from the
+~rutt~ relation we have as an assumption.
+
+What's proving tricky, though, is a mix of constraints in Coq around ~Type / Prop~, and ~CoInductive  / Inductive~.
+
+~t_nat2~ is an ~itree~, which means it's defined coinductively. I need
+to build up this ~t_nat2~ somehow, and since it's possibly an infinite
+coinductive structure, I have to use coinduction to do this. However,
+coinduction can only be used in order to build up a coinductive value,
+and ~exists~ is ~Inductive~. This means that I need to build up
+~t_nat2~ in full before providing it to the existential.
+
+This means that I need to have some definition like the following:
+
+#+begin_src coq
+  Lemma get_nat_tree :
+    forall t_nat t_bool,
+      rutt (@top_level_rel) (@top_level_rel_ans) nb t_nat t_bool ->
+      forall t_bool2, runBool t_bool t_bool2 ->
+             itree NatEvent nat.
+#+end_src
+
+Ideally I would be able to just build up ~t_nat2~ from ~t_bool2~, but unfortunately I do end up needing information from
+~rutt (@top_level_rel) (@top_level_rel_ans) nb t_nat t_bool~ in order to build up ~t_nat2~ because
+I need to have a relationship between continuations for ~Vis (nat_ev n) k_n~ and ~Vis (bool_ev b) k_b~ nodes.
+Trying to construct a ~Vis (nat_ev n) k_n~ from a ~Vis (bool_ev b) k_b~ node gets me in trouble...
+I can say ~Vis (nat_ev (if b then 1 else 0)) ?k_n~, but it's not obvious what to put for ~k_n : nat -> itree E X~. I have a ~k_b : bool -> itree E X~,
+but I cannot safely convert the value returned by the ~nat_ev~ event to a ~bool~.
+
+Ultimately this means that I need to do some kind of inversion on the
+~rutt~ relation in the hypothesis... However this ~rutt~ relation is
+in ~Prop~, and the ~itree NatEvent nat~ that we're constructing is in
+~Type~, and we're not allowed to do elimination on a ~Prop~ to
+construct a ~Type~... Even though in this case it seems like it should
+be "safe" because ~get_nat_tree~ is only going to be used to build an
+existential, which is a ~Prop~.
+
+If I assume some axioms that let me do the elimination of ~Prop~ into
+~Type~ I'm able to define ~get_nat_tree~... However, I then run into
+problems in the main lemma where I can't seem to do elimination on any
+of my hypotheses (the ~rutt~ / ~runBool~ ones)... Coq claims that
+they're used in the goal and cannot be changed.
+
+Is there any way around these  constraints?
+
+* Building this example
+
+Should be able to just:
+
+#+begin_src sh
+  cd src
+  make
+#+end_src
+
+A specific version of the itrees library is needed... I believe this can be installed with opam as follows:
+
+#+begin_src sh
+  opam pin add coq-itree 5.1.0
+  opam install coq-ext-lib
+  opam install coq-paco
+#+end_src
+
+If you use nix, this project has a flake that you can use to get the
+same versions of Coq as me (8.16). Typing ~nix develop .~ should get
+you an environment where you can build the project.
