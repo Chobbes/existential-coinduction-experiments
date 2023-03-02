@@ -481,7 +481,7 @@ Proof.
     apply (VisF (nat_ev (if r then 1 else 0))).
     intros n. (* Result *)
     apply CIH.
-    apply (if Nat.eqb n 0 then k false else if Nat.eqb n 1 then k true else ITree.spin).
+    apply (if Nat.eqb n 0 then k false else if Nat.eqb n 1 then k true else k false).
 Defined.
 
 Import Morphisms.
@@ -1473,15 +1473,15 @@ Proof.
                     (VisF (nat_ev (if b then 1 else 0))
                        (fun n0 : nat =>
                           get_nat_tree'
-                            (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else ITree.spin)) =
+                            (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else k0 false)) =
                        observe (Vis (nat_ev (if b then 1 else 0))
                          (fun n0 : nat =>
                             get_nat_tree'
-                              (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else ITree.spin)))) as EQVIS by reflexivity.
+                              (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else k0 false)))) as EQVIS by reflexivity.
                   rewrite EQVIS.
 
                   eapply Interp_PropT_Vis with (k2:=(fun n0 : nat =>
-                                                       get_nat_tree' (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else ITree.spin))).
+                                                       get_nat_tree' (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else k0 false))).
                   2: {
                     red.
                     reflexivity.
@@ -1498,7 +1498,7 @@ Proof.
                   clear EQVIS.
 
                   rewrite (itree_eta_ (k3 a)).
-                  rewrite (itree_eta_ (if Nat.eqb a 0 then k0 false else if Nat.eqb a 1 then k0 true else ITree.spin)).
+                  rewrite (itree_eta_ (if Nat.eqb a 0 then k0 false else if Nat.eqb a 1 then k0 true else k0 false)).
 
                   specialize (K_RUTT a (if Nat.eqb a 0 then false else if Nat.eqb a 1 then true else false)).
                   forward K_RUTT; cbn; auto.
@@ -1548,7 +1548,20 @@ Proof.
                       pclearbot.
                       setoid_rewrite K0K2.
                       eapply HK.
-                    - (* Spin case... *)
+                    - (* Bogus case *)
+                      repeat (rewrite <- itree_eta_).
+                      specialize (HK false).
+                      forward HK.
+                      { eapply ReturnsVis.
+                        unfold ITree.trigger.
+                        reflexivity.
+                        constructor. reflexivity.
+                      }
+                      pclearbot.
+                      setoid_rewrite K0K2.
+                      eapply HK.
+                  }
+                +
 
                     rewrite <- K0K2.
 
