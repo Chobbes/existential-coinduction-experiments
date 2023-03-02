@@ -1455,6 +1455,219 @@ Proof.
               destruct b.
 
               rewrite HANDLER in VIS_HANDLED.
+              punfold VIS_HANDLED.
+              red in VIS_HANDLED.
+
+              punfold VIS. red in VIS.
+              dependent induction VIS.
+              - rewrite (itree_eta_ m1).
+                rewrite <- x.
+
+                dependent induction VIS_HANDLED; subst_existT.
+                + rewrite <- x0.
+                  pstep; red; cbn.
+                  constructor; auto.
+                  cbn.
+
+                  assert
+                    (VisF (nat_ev (if b then 1 else 0))
+                       (fun n0 : nat =>
+                          get_nat_tree'
+                            (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else ITree.spin)) =
+                       observe (Vis (nat_ev (if b then 1 else 0))
+                         (fun n0 : nat =>
+                            get_nat_tree'
+                              (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else ITree.spin)))) as EQVIS by reflexivity.
+                  rewrite EQVIS.
+
+                  eapply Interp_PropT_Vis with (k2:=(fun n0 : nat =>
+                                                       get_nat_tree' (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else ITree.spin))).
+                  2: {
+                    red.
+                    reflexivity.
+                  }
+                  2: {
+                    setoid_rewrite bind_trigger.
+                    destruct EV_REL as [[R1 R3] | [R1 R3]]; subst; auto;
+                      reflexivity.
+                  }
+
+                  intros a RET.
+                  right.
+
+                  clear EQVIS.
+
+                  rewrite (itree_eta_ (k3 a)).
+                  rewrite (itree_eta_ (if Nat.eqb a 0 then k0 false else if Nat.eqb a 1 then k0 true else ITree.spin)).
+
+                  specialize (K_RUTT a (if Nat.eqb a 0 then false else if Nat.eqb a 1 then true else false)).
+                  forward K_RUTT; cbn; auto.
+
+                  eapply CIH.
+                  { specialize (REL a).
+                    red in REL. pclearbot.
+                    assert (k3 a ≈ k1 a) as EQ by auto.
+                    rewrite EQ.
+
+                    punfold K_RUTT. red in K_RUTT. cbn in K_RUTT.
+
+                    pstep; red; cbn.
+                    eauto. 
+                  }
+
+                  { setoid_rewrite HANDLER in HK.
+
+                    specialize (REL0 (if Nat.eqb a 0 then false else if Nat.eqb a 1 then true else false)).
+                    red in REL0.
+                    pclearbot.
+                    assert (k0 (if Nat.eqb a 0 then false else if Nat.eqb a 1 then true else false) ≈ k2 (if Nat.eqb a 0 then false else if Nat.eqb a 1 then true else false)) as K0K2.
+                    { repeat red.
+                      punfold REL0.
+                    }
+
+                    destruct a; [| destruct a]; cbn in *.
+                    - repeat (rewrite <- itree_eta_).
+                      specialize (HK false).
+                      forward HK.
+                      { eapply ReturnsVis.
+                        unfold ITree.trigger.
+                        reflexivity.
+                        constructor. reflexivity.
+                      }
+                      pclearbot.
+                      setoid_rewrite K0K2.
+                      eapply HK.
+                    - repeat (rewrite <- itree_eta_).
+                      specialize (HK true).
+                      forward HK.
+                      { eapply ReturnsVis.
+                        unfold ITree.trigger.
+                        reflexivity.
+                        constructor. reflexivity.
+                      }
+                      pclearbot.
+                      setoid_rewrite K0K2.
+                      eapply HK.
+                    - (* Spin case... *)
+
+                    rewrite <- K0K2.
+
+                    specialize (REL a).
+                    red in REL. pclearbot.
+
+                    specialize (HK b).
+                    forward HK.
+                    { eapply ReturnsVis.
+                      unfold ITree.trigger.
+                      reflexivity.
+                      constructor. reflexivity.
+                    }
+
+                    pclearbot.
+
+                    (* Somehow I need to get the bool that `a` is related to... *)
+                    (* I *could* just do case analysis on `a`, maybe? *)
+                    (* b should be related somehow, though? *)
+                    specialize (K_RUTT a b).
+                    forward K_RUTT; cbn; auto.
+                    punfold K_RUTT. red in K_RUTT. cbn in K_RUTT.
+
+                    pstep; red; cbn.
+                    eauto. 
+
+
+                    unfold top_level_rel_ans in K_RUTT.
+
+                    destruct a.
+                    - (* a=0, False *)
+                      specialize (HK false).
+                      forward HK.
+                      { eapply ReturnsVis.
+                        unfold ITree.trigger.
+                        reflexivity.
+                        constructor. reflexivity.
+                      }
+
+                      pclearbot.
+
+                      
+
+                    
+                    destruct EV_REL as [[R1 R3] | [R1 R3]]; subst; auto.
+                    - specialize (K_RUTT 1 true).
+                      forward K_RUTT; cbn; auto.
+                      split; red; auto.
+
+                      destruct a.
+                      +  
+
+                      
+                      eapply Returns_vis_inversion_ in RET.
+                      2: {
+                        unfold ITree.trigger.
+                        reflexivity.
+                      }
+
+                      destruct RET as [a' RET].
+                      eapply Returns_Ret_ in RET; [| reflexivity]; subst.
+
+                      
+                      remember (ITree.trigger (nat_ev 1)).
+                      dependent induction RET; subst.
+                      + pinversion H.
+                      + eapply IHRET.
+                        admit.
+                      + 
+                      pinversion H.
+
+                      punfold K_RUTT. red in K_RUTT.
+                      dependent induction K_RUTT.
+                      + rewrite <- x.
+                        red.
+                        red in REL0.
+                        specialize (REL0 true).
+                        pclearbot.
+                        punfold REL0. red in REL0.
+                        dependent induction REL0.
+                        -- 
+                      
+                      red in 
+                    destruct a.
+                    - cbn in *. red in REL0.
+                      specialize (REL0 false).
+                      pclearbot.
+                      specialize (HK false).
+                      specialize (K_RUTT 0 false).
+                      forward K_RUTT; auto.
+                      
+                      forward HK.
+                      constructor.
+                      reflexivity.
+
+                  }
+                  
+                    ((VisF (nat_ev (if b then 1 else 0))
+                             (fun n0 : nat =>
+                                get_nat_tree'
+                                  (if Nat.eqb n0 0
+                                   then ITree.subst k2 (Ret false)
+                                   else if Nat.eqb n0 1 then ITree.subst k2 (Ret true) else ITree.spin))) = observe (Vis (nat_ev (if b then 1 else 0))
+                                                                                                                       (fun n0 : nat =>
+                                                                                                                          get_nat_tree'
+                                                                                                                            (if Nat.eqb n0 0
+                                                                                                                             then ITree.subst k2 (Ret false)
+                                                                                                                             else if Nat.eqb n0 1 then ITree.subst k2 (Ret true) else ITree.spin)))) as EQVIS by reflexivity.
+                  rewrite EQVIS.
+
+              dependent induction VIS_HANDLED; subst_existT.
+              - red in REL.
+                punfold VIS. red in VIS.
+                dependent induction VIS.
+                + cbn in *.
+                  pstep; red; cbn.
+                  rewrite (itree_eta_ m1).
+                  setoid_rewrite <- x.
+
 
               pstep; red; cbn.
               assert ((VisF (nat_ev (if b then 1 else 0))
