@@ -197,7 +197,7 @@ Axiom rutt_inv_Type :
                          (observe t1) (observe t2')) *
                         (ot1 = observe t1) *
                         (TauF t2' = observe t2)}})
-             
+
     ))%type.
 
 Axiom interp_PropTF_vis_l_inv_Type :
@@ -396,7 +396,7 @@ Proof.
         cbn in EQ.
         rewrite bind_trigger in EQ.
         subst.
-        
+
         (* t_bool2 has an extra tau *)
         apply go.
         apply TauF.
@@ -691,9 +691,339 @@ Proof.
            punfold H.
            red in H.
 
-          remember (TauF m2) as M2.
+           { dependent induction H.
+             - rewrite <- x.
+               constructor.
+               destruct H as [[R1 R3] | [R1 R3]]; subst; auto.
+             - rewrite <- x.
+               constructor; auto.
+           }
+        -- specialize (EQ t2).
+           contradiction.
+        -- eapply IHHS; eauto.
+           left.
+           pclearbot.
+           assert (rutt (@top_level_rel) (@top_level_rel_ans) nb  m1 (Tau t1)).
+           { apply H.
+           }
+           setoid_rewrite tau_eutt in H0.
+           rewrite <- itree_eta_.
+           apply H0.
+        -- specialize (EQ t2).
+           contradiction.
+        -- { dependent induction RUN; subst.
+             - rewrite <- x in EQ.
+               specialize (EQ t0).
+               contradiction.
+             - (* TauL *)
+               clear IHRUN.
+               pclearbot.
+
+               apply rutt_inv_Vis_r in H.
+               destruct H as [U1 [e1 [k3 [M1 [EV_REL K_RUTT]]]]].
+               punfold M1.
+               red in M1.
+               genobs m1 om1.
+               clear m1 Heqom1.
+               dependent induction M1.
+               + rename H1 into VIS_HANDLED.
+                 destruct e, e1; try destruct n; try destruct n0; cbn in EV_REL; try inversion EV_REL.
+
+                   { (* Nondeterminism events *)
+                     red in H0.
+                     destruct H0.
+                     - (* True *)
+                       subst.
+                       setoid_rewrite bind_ret_l in VIS_HANDLED.
+
+                       specialize (HK true).
+                       forward HK. constructor; reflexivity.
+                       pclearbot.
+                       rewrite <- VIS_HANDLED in HK.
+
+                       eapply Interp_PropT_Vis with (k2 := fun _ => get_nat_tree' {| _observe := observe t2 |}).
+                       2: {
+                         red.
+                         left; auto.
+                       }
+                       2: {
+                         setoid_rewrite bind_ret_l.
+                         reflexivity.
+                       }
+
+                       intros a RET.
+                       eapply Returns_Ret_ in RET; [| reflexivity]; subst.
+
+                       right.
+                       rewrite (itree_eta_ (k0 _)).
+
+                       eapply CIH.
+                       + specialize (K_RUTT true true).
+                         forward K_RUTT; cbn; auto.
+                         pclearbot.
+                         repeat rewrite <- itree_eta_.
+                         assert (k0 true ≈ k3 true) as K0K3 by apply REL.
+                         rewrite K0K3.
+                         punfold K_RUTT. red in K_RUTT. cbn in K_RUTT.
+                         pstep; red; cbn; eauto.
+                       + repeat rewrite <- itree_eta_.
+                         eapply HK.
+                     - (* False *)
+                       subst.
+                       setoid_rewrite bind_ret_l in VIS_HANDLED.
+
+                       specialize (HK false).
+                       forward HK. constructor; reflexivity.
+                       pclearbot.
+                       rewrite <- VIS_HANDLED in HK.
+
+                       eapply Interp_PropT_Vis with (k2 := fun _ => get_nat_tree' {| _observe := observe t2 |}).
+                       2: {
+                         red.
+                         right; auto.
+                       }
+                       2: {
+                         setoid_rewrite bind_ret_l.
+                         reflexivity.
+                       }
+
+                       intros a RET.
+                       eapply Returns_Ret_ in RET; [| reflexivity]; subst.
+
+                       right.
+                       rewrite (itree_eta_ (k0 _)).
+
+                       eapply CIH.
+                       + specialize (K_RUTT false false).
+                         forward K_RUTT; cbn; auto.
+                         pclearbot.
+                         repeat rewrite <- itree_eta_.
+                         assert (k0 false ≈ k3 false) as K0K3 by apply REL.
+                         rewrite K0K3.
+
+                         punfold K_RUTT. red in K_RUTT. cbn in K_RUTT.
+                         pstep; red; cbn; eauto.
+                       + repeat rewrite <- itree_eta_.
+                         eapply HK.
+                   }
+
+                   { (* Regular events *)
+                     destruct b.
+                     red in H0.
+                     rewrite H0 in VIS_HANDLED.
+
+                     setoid_rewrite bind_trigger in VIS_HANDLED.
+                     punfold VIS_HANDLED. red in VIS_HANDLED.
+                     cbn in VIS_HANDLED.
+                     dependent induction VIS_HANDLED.
+                     { rewrite <- x.
+
+                       eapply Interp_PropT_Vis with (k2:=(fun n0 : nat =>
+                                                            get_nat_tree' (k2 (if Nat.eqb n0 0 then false else if Nat.eqb n0 1 then true else false)))).
+                       2: {
+                         red.
+                         reflexivity.
+                       }
+                       2: {
+                         cbn.
+                         setoid_rewrite bind_trigger.
+                         pstep; red; cbn.
+
+                         destruct EV_REL as [[R1 R3] | [R1 R3]]; subst; auto.
+                         - constructor.
+                           intros v.
+                           red.
+                           specialize (REL0 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false)).
+                           red in REL0.
+                           pclearbot.
+                           assert (k5 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false) ≈ k2 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false)) as K0K2.
+                           { eapply REL0.
+                           }
+
+                           setoid_rewrite H0 in HK.
+
+                           destruct v; [| destruct v]; cbn in *.
+                           + repeat (rewrite <- itree_eta_).
+                             specialize (HK false).
+                             forward HK.
+                             { eapply ReturnsVis.
+                               unfold ITree.trigger.
+                               reflexivity.
+                               constructor. reflexivity.
+                             }
+                             pclearbot.
+                             left.
+                             setoid_rewrite K0K2.
+                             assert ((get_nat_tree' (k2 false)) ≈ (get_nat_tree' (k2 false))).
+                             reflexivity.
+                             eauto.
+                           + repeat (rewrite <- itree_eta_).
+                             specialize (HK true).
+                             forward HK.
+                             { eapply ReturnsVis.
+                               unfold ITree.trigger.
+                               reflexivity.
+                               constructor. reflexivity.
+                             }
+                             pclearbot.
+                             left.
+                             setoid_rewrite K0K2.
+                             assert ((get_nat_tree' (k2 true)) ≈ (get_nat_tree' (k2 true))).
+                             reflexivity.
+                             eauto.
+                             + (* Bogus case *)
+                               repeat (rewrite <- itree_eta_).
+                               specialize (HK false).
+                               forward HK.
+                               { eapply ReturnsVis.
+                                 unfold ITree.trigger.
+                                 reflexivity.
+                                 constructor. reflexivity.
+                               }
+                               pclearbot.
+                               left.
+                               setoid_rewrite K0K2.
+                               assert ((get_nat_tree' (k2 false)) ≈ (get_nat_tree' (k2 false))).
+                               reflexivity.
+                               eauto.
+                         - constructor.
+                           intros v.
+                           red.
+                           specialize (REL0 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false)).
+                           red in REL0.
+                           pclearbot.
+                           assert (k5 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false) ≈ k2 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false)) as K0K2.
+                           { eapply REL0.
+                           }
+
+                           setoid_rewrite H0 in HK.
+
+                           destruct v; [| destruct v]; cbn in *.
+                           + repeat (rewrite <- itree_eta_).
+                             specialize (HK false).
+                             forward HK.
+                             { eapply ReturnsVis.
+                               unfold ITree.trigger.
+                               reflexivity.
+                               constructor. reflexivity.
+                             }
+                             pclearbot.
+                             left.
+                             setoid_rewrite K0K2.
+                             assert ((get_nat_tree' (k2 false)) ≈ (get_nat_tree' (k2 false))).
+                             reflexivity.
+                             eauto.
+                           + repeat (rewrite <- itree_eta_).
+                             specialize (HK true).
+                             forward HK.
+                             { eapply ReturnsVis.
+                               unfold ITree.trigger.
+                               reflexivity.
+                               constructor. reflexivity.
+                             }
+                             pclearbot.
+                             left.
+                             setoid_rewrite K0K2.
+                             assert ((get_nat_tree' (k2 true)) ≈ (get_nat_tree' (k2 true))).
+                             reflexivity.
+                             eauto.
+                             + (* Bogus case *)
+                               repeat (rewrite <- itree_eta_).
+                               specialize (HK false).
+                               forward HK.
+                               { eapply ReturnsVis.
+                                 unfold ITree.trigger.
+                                 reflexivity.
+                                 constructor. reflexivity.
+                               }
+                               pclearbot.
+                               left.
+                               setoid_rewrite K0K2.
+                               assert ((get_nat_tree' (k2 false)) ≈ (get_nat_tree' (k2 false))).
+                               reflexivity.
+                               eauto.
+                       }
+
+                       intros a RET.
+                       specialize (K_RUTT a (if Nat.eqb a 0 then false else if Nat.eqb a 1 then true else false)).
+                       forward K_RUTT.
+                       cbn; auto.
+
+                       specialize (HK (if Nat.eqb a 0 then false else if Nat.eqb a 1 then true else false)).
+                       rewrite H0 in HK.
+                       forward HK.
+                       { eapply ReturnsVis.
+                         unfold ITree.trigger.
+                         reflexivity.
+                         cbn.
+                         constructor.
+                         reflexivity.
+                       }
+
+                       right.
+                       rewrite (itree_eta_ (k0 a)).
+                       rewrite (itree_eta_ (k2 _)).
+                       pclearbot.
+                       eapply CIH;
+                         repeat rewrite <- itree_eta_.
+
+                       repeat rewrite <- itree_eta_.
+                       assert (k0 a ≈ k3 a) as K0K3 by apply REL.
+                       rewrite K0K3.
+                       eapply K_RUTT.
+                       red.
+                       eapply HK.
+                     }
+
+                     { rewrite <- x in EQ.
+                       specialize (EQ t1).
+                       contradiction.
+                     }
+                   }
+               + constructor; auto.
+                 eapply IHM1; eauto.
+             - rewrite <- x in EQ.
+               exfalso.
+               eapply EQ; eauto.
+           }
+      + pstep; red; cbn.
+        constructor.
+        right.
+        rewrite (itree_eta_ m1).
+        rewrite (itree_eta_ t2).
+
+        pclearbot.
+        eapply CIH; repeat rewrite <- itree_eta_.
+        eauto.
+
+        red.
+        rewrite <- (tau_eutt m2).
+
+        pstep; red; cbn.
+        auto.
+    - pstep; red; cbn.
+      econstructor.
+      admit.
+      admit.
+      admit.
+    - pstep; red; cbn.
+      constructor; auto.
+      forward IHREL; auto.
+      forward IHREL; auto.
+
+      punfold IHREL.
+    - eapply IHREL; eauto.
+      red in RUN.
+      setoid_rewrite tau_eutt in RUN.
+      rewrite <- itree_eta_.
+      apply RUN.
+  }
+
+
+
+           remember (TauF m2) as M2.
            revert m1 m2 H HeqM2.
-           induction RUN; intros m1 m2 H' HeqM2; try discriminate.
+           induction RUN; intros m1 nm2 H' HeqM2; try discriminate.
            { specialize (EQ t2).
              contradiction.
            }
@@ -1010,7 +1340,7 @@ Proof.
            { inversion HeqM2; subst.
              desobs t2 Ht2.
              desobs m1 Hm1.
-             - 
+             -
                2: {
                  exfalso; eapply EQ; eauto.
                }
@@ -1019,13 +1349,13 @@ Proof.
                  destruct e; try destruct n; cbn in H0.
                  - destruct H0; subst;
                      setoid_rewrite bind_ret_l in H1.
-                   + 
+                   +
                }
-             
+
              destruct e; try destruct n; cbn in H0.
 
              try destruct n; try destruct n0; cbn in H1; try inversion H1.
-             
+
              punfold H1. red in H1.
              dependent induction H1;
                try rewrite <- x0.
@@ -1049,10 +1379,10 @@ Proof.
                    constructor; cbn; auto.
                + specialize (EQ t0).
                  contradiction.
-             - 
+             -
 
            }
-             
+
              red in H0.
 
           punfold H1. red in H1.
@@ -1065,19 +1395,19 @@ Proof.
              - admit.
              - rewrite <- x in EQ.
                specialize (EQ t1); contradiction.
-             - 
+             -
 
              - rewrite <- x0.
                rewrite <- x0 in RUN.
 
                cbn.
                admit.
-             - 
+             -
 
            }
 
-             
-      + 
+
+      +
 
            cbn. constructor; auto.
            eapply IHHS; eauto.
@@ -1097,7 +1427,7 @@ Proof.
                        eapply K_RUTT.
                        left.
 
-                       
+
                        destruct a.
                        - cbn.
 
@@ -1473,7 +1803,7 @@ Proof.
                        red.
                      }
 
-                       
+
                      eapply Interp_PropT_Vis with (k2:=(fun n0 : nat =>
                                                           get_nat_tree' (if Nat.eqb n0 0 then k false else if Nat.eqb n0 1 then k true else k false))).
                    }
@@ -1481,7 +1811,7 @@ Proof.
                    { (* Regular events *)
 
                    }
-                   
+
 
                    econstructor.
                    eapply Interp_PropT_Vis with (k2:=(fun n0 : nat =>
@@ -1492,7 +1822,7 @@ Proof.
 
 
            induction RUN.
-           
+
 
         admit.
       + specialize (EQ t2).
@@ -1509,7 +1839,7 @@ Proof.
         pstep. red. cbn.
         constructor; auto.
 
-        
+
         right.
 
         specialize (CIH (observe m1) (observe m2) (observe t2)).
@@ -1603,7 +1933,7 @@ Proof.
              *Actually*, the second case is not where t2 is a Vis node.
              It's the vis case of interp_prop...
 
-               | Interp_PropT_Vis : forall (A : Type) (e : E A) (k1 : A -> itree E R1) 
+               | Interp_PropT_Vis : forall (A : Type) (e : E A) (k1 : A -> itree E R1)
                          (k2 : A -> itree F R2) (ta : itree F A) (t2 : itree F R2),
                        (forall a : A, Returns a ta -> sim (k1 a) (k2 a)) ->
                        h_spec A e ta ->
@@ -2383,7 +2713,7 @@ Proof.
                     punfold K_RUTT. red in K_RUTT. cbn in K_RUTT.
 
                     pstep; red; cbn.
-                    eauto. 
+                    eauto.
                   }
 
                   { setoid_rewrite HANDLER in HK.
@@ -2467,7 +2797,7 @@ Proof.
                      eapply HK.
                      setoid_rewrite HANDLER.
                      auto.
-                     
+
                      pstep; red; cbn; eauto.
               - rewrite (itree_eta_ m1).
                 rewrite <- x.
@@ -2495,7 +2825,7 @@ Proof.
                                          (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else k0 false)))) as EQVIS by reflexivity.
                     rewrite EQVIS.
 
-                    eapply Interp_PropT_Vis with (k2:=(fun n0 : nat => 
+                    eapply Interp_PropT_Vis with (k2:=(fun n0 : nat =>
                                                          get_nat_tree' (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else k0 false))).
 
                     2: {
@@ -2580,8 +2910,8 @@ Proof.
                     eapply IHVIS; eauto.
                     constructor; auto.
                   }
-                  
-                  eapply Interp_PropT_Vis. with (k2:=(fun n0 : nat => 
+
+                  eapply Interp_PropT_Vis. with (k2:=(fun n0 : nat =>
                                                        get_nat_tree' (if Nat.eqb n0 0 then k0 false else if Nat.eqb n0 1 then k0 true else k0 false))).
                   2: {
                     red.
@@ -2613,7 +2943,7 @@ Proof.
                     punfold K_RUTT. red in K_RUTT. cbn in K_RUTT.
 
                     pstep; red; cbn.
-                    eauto. 
+                    eauto.
                   }
 
                   { setoid_rewrite HANDLER in HK.
@@ -2697,9 +3027,9 @@ Proof.
                      eapply HK.
                      setoid_rewrite HANDLER.
                      auto.
-                     
+
                      pstep; red; cbn; eauto.
-                     
+
 
                      constructor. to
                      red.
@@ -2753,7 +3083,7 @@ Proof.
                     punfold K_RUTT. red in K_RUTT. cbn in K_RUTT.
 
                     pstep; red; cbn.
-                    eauto. 
+                    eauto.
                   }
 
                   { setoid_rewrite HANDLER in HK.
@@ -2826,7 +3156,7 @@ Proof.
                     punfold K_RUTT. red in K_RUTT. cbn in K_RUTT.
 
                     pstep; red; cbn.
-                    eauto. 
+                    eauto.
 
 
                     unfold top_level_rel_ans in K_RUTT.
@@ -2843,18 +3173,18 @@ Proof.
 
                       pclearbot.
 
-                      
 
-                    
+
+
                     destruct EV_REL as [[R1 R3] | [R1 R3]]; subst; auto.
                     - specialize (K_RUTT 1 true).
                       forward K_RUTT; cbn; auto.
                       split; red; auto.
 
                       destruct a.
-                      +  
+                      +
 
-                      
+
                       eapply Returns_vis_inversion_ in RET.
                       2: {
                         unfold ITree.trigger.
@@ -2864,13 +3194,13 @@ Proof.
                       destruct RET as [a' RET].
                       eapply Returns_Ret_ in RET; [| reflexivity]; subst.
 
-                      
+
                       remember (ITree.trigger (nat_ev 1)).
                       dependent induction RET; subst.
                       + pinversion H.
                       + eapply IHRET.
                         admit.
-                      + 
+                      +
                       pinversion H.
 
                       punfold K_RUTT. red in K_RUTT.
@@ -2882,9 +3212,9 @@ Proof.
                         pclearbot.
                         punfold REL0. red in REL0.
                         dependent induction REL0.
-                        -- 
-                      
-                      red in 
+                        --
+
+                      red in
                     destruct a.
                     - cbn in *. red in REL0.
                       specialize (REL0 false).
@@ -2892,13 +3222,13 @@ Proof.
                       specialize (HK false).
                       specialize (K_RUTT 0 false).
                       forward K_RUTT; auto.
-                      
+
                       forward HK.
                       constructor.
                       reflexivity.
 
                   }
-                  
+
                     ((VisF (nat_ev (if b then 1 else 0))
                              (fun n0 : nat =>
                                 get_nat_tree'
@@ -2957,14 +3287,14 @@ Proof.
 
               intros a RET.
               right.
-              
+
               econstructor; auto.
-              
+
               setoid_rewrite VIS_HANDLED.
-              
+
               rewrite VIS_HANDLED.
                         eapply Interp_PropT_Vis with (k2:=fun x => k4 x).
-              
+
               destruct HANDLER; subst; setoid_rewrite bind_ret_l in VIS_HANDLED.
               - (* True *)
                 specialize (HK true).
@@ -3637,7 +3967,7 @@ Proof.
                 }
             }
 
-            
+
                         destruct H; subst; setoid_rewrite bind_ret_l in H0.
                         - specialize (HK false).
                           forward HK.
@@ -3704,7 +4034,7 @@ Proof.
                           left.
                           rewrite H0.
                           auto.
-                        
+
                         specialize (HK false).
                         forward HK.
                         constructor. reflexivity.
@@ -3713,7 +4043,7 @@ Proof.
                         rewrite (itree_eta_ (k3 false)).
                         eapply CIH.
 
-                        2: 
+                        2:
                           econstructor; auto.
 
                       }
@@ -3737,12 +4067,12 @@ Proof.
                       rewrite (itree_eta_ (k3 false)).
                       eapply CIH.
 
-                      2: 
+                      2:
                       econstructor; auto.
-                    
+
                 }
 
-                
+
                 dependent induction HK.
                 { setoid_rewrite <- x in K_RUTT.
 
@@ -3752,8 +4082,8 @@ Proof.
                 setoid_rewrite <- Heqokt in HK.
                 clear Heqokt.
 
-                
-                
+
+
                 dependent induction VIS.
                 { admit.
 
@@ -3765,14 +4095,14 @@ Proof.
                 dependent induction ot2.
                 + pstep; red; cbn.
                   constructor; auto.
-                  
-                
+
+
                 punfold HK. red in HK.
                 dependent induction HK; subst.
                 admit.
                 admit.
                 + admit.
-                + 
+                +
                 + rewrite <- x.
                   pstep; red; cbn.
                   constructor; eauto.
@@ -3780,7 +4110,7 @@ Proof.
                   punfold VIS. red in VIS.
                   dependent induction VIS.
                   -- admit.
-                  -- 
+                  --
                   -- rewrite <- x.
                      assert ((@RetF NatEvent nat (itree NatEvent nat) (if r2 then 1 else 0)) = observe ((Ret (if r2 then 1 else 0)))).
                      reflexivity.
@@ -3839,11 +4169,11 @@ Proof.
                        forward IHK_RUTT; auto.
                      }
 
-                     
+
                      rewrite REL.
 
-                     
-                
+
+
                 rewrite (itree_eta_ t2) in VIS_HANDLED, HK.
                 genobs t2 ot2.
                 clear t2 Heqot2.
@@ -3884,17 +4214,17 @@ Proof.
                   dependent induction HK.
                   -- punfold K_RUTT; red in K_RUTT; cbn in K_RUTT.
                      setoid_rewrite <- x in K_RUTT.
-                     inversion 
+                     inversion
                      pstep; red; cbn.
                      constructor; auto.
 
-                
+
                 (* Maybe I don't want to do this... Can use CIH for vis, in theory... *)
                 eapply paco2_mon_bot; eauto.
                 rewrite tau_eutt.
                 rewrite VIS_HANDLED.
                 rewrite VIS.
-                
+
                 pstep; red; cbn.
                 eapply Interp_PropT_Vis with (k2:=(fun b => (get_nat_tree' {| _observe := observe (k2 b) |}))).
 
@@ -3963,8 +4293,8 @@ Proof.
                     - rewrite <- x2.
                       pstep; red; cbn.
                       constructor; auto.
-                      
-                      
+
+
                   }
 
                 (* I probably need to save `r` in the paco2 relation
@@ -4010,19 +4340,19 @@ Proof.
                 pstep. red.
 
                 right.
-                
+
                 rewrite <- H7 in HK.
-                
+
                 punfold H7. red in H7.
-                
+
                 admit.
               - admit.
             }
             { (* nat_ev / bool_ev *)
               destruct b.
-              
+
             }
-            
+
 
             inversion RUN; subst.
             { pstep. red.
@@ -4030,7 +4360,7 @@ Proof.
               constructor.
               right.
 
-              
+
 
             }
 
@@ -4061,7 +4391,7 @@ Proof.
                     }
 
                     left.
-                    
+
                     intros a H2.
                     2: {
                       red.
@@ -4072,28 +4402,28 @@ Proof.
                     left.
                     reflexivity.
 
-                 
+
               -- setoid_rewrite bind_ret_l.
                  specialize (HK true).
                  forward HK. constructor; reflexivity.
                  pclearbot.
 
-                    
+
 
 
 
           (* TODO: interp_PropTF inversion lemma *)
           Set Nested Proofs Allowed.
           Lemma interp_prop_inv_vis_l :
-            
-          
 
-          
+
+
+
           apply interp_prop_vis_inv in RUN.
           apply interp_prop
         }
 
-            
+
 
 
           eapply interp_prop_inv_tau_l in RUN.
@@ -4105,10 +4435,10 @@ Proof.
           pstep; red; cbn.
           constructor; auto.
           cbn.
-          
 
-          
-          
+
+
+
 
 
           specialize (IHRUN (Ret r1).
@@ -4136,12 +4466,12 @@ Proof.
           pfold.
           red.
           apply H1.
-          
+
           apply H in H0.
           eapply interp_prop_eutt_Proper.
           eapply interp_prop_Proper_R3.
           pstep; red; cbn.
-          
+
           rewrite H'.
           punfold H'. red in H'.
           cbn in *.
@@ -4154,9 +4484,9 @@ Proof.
         }
 
         { (* Vis *)
-          
+
         }
-        
+
         { setoid_rewrite Hm2 in RUN.
           inversion RUN; subst.
           + punfold H'; red in H'.
@@ -4228,7 +4558,7 @@ Proof.
                constructor; auto.
                destruct H as [[R1 R3] | [R1 R3]]; subst; cbn; auto.
 
-            -- 
+            --
 
             pstep; red; cbn.
             constructor; auto.
@@ -4288,7 +4618,7 @@ Proof.
               pstep; red; cbn.
               auto.
 
-            + 
+            +
 
             eapply IHRUN; eauto.
         }
@@ -4321,7 +4651,7 @@ Proof.
 
         { (* Tau *)
           apply rutt_inv_Tau_l in H'.
-          eapply 
+          eapply
           eapply IHRUN; eauto.
           punfold H'; red in H'; cbn in H'.
           dependent induction H'.
@@ -4342,7 +4672,7 @@ Proof.
           pstep; red; cbn.
           constructor; eauto.
 
-          specialize 
+          specialize
 
           rewrite <- Hm1.
           eapply IHRUN.
@@ -4378,18 +4708,18 @@ Proof.
           - eapply IHRUN; eauto.
 
         }
-    
+
 
           pstep; red; cbn.
           constructor; auto.
           cbn.
           punfold H'.
           red in H'.
-          
-          
+
+
           dependent induction H'.
           + inversion HeqM2; subst.
-            rewrite <- 
+            rewrite <-
 
             destruct H as [[R1 R3] | [R1 R3]]; subst; auto.
           + forward IHRUN; auto.
@@ -4403,13 +4733,13 @@ Proof.
 
             punfold IHRUN.
 
-          - 
+          -
 
         }
 
         inversion HeqM2; subst.
         eapply IHRUN.
-        
+
         rewrite (itree_eta m1) in Hrutt.
         desobs m1 Hm1; clear m1 Hm1.
         pclearbot.
@@ -4420,11 +4750,11 @@ Proof.
            constructor; auto.
 
            inversion H'; subst.
-           ++ 
-           
-           
+           ++
+
+
         eapply IHRUN; eauto.
-        
+
     - admit.
     - pstep. red.
       cbn.
@@ -4443,13 +4773,13 @@ Proof.
 
       forward IHREL; auto.
   }
-      
+
       forward IHREL; auto.
       forward IHREL; auto.
       punfold IHREL.
-      
 
-    
+
+
     dependent induction ot_bool2.
     - punfold RUN; red in RUN.
       cbn in RUN.
@@ -4502,7 +4832,7 @@ Proof.
              pstep. red.
              cbn.
              eapply Rutt.EqTauL.
-             eauto.             
+             eauto.
            }
            forward IHRUN; auto.
 
@@ -4566,18 +4896,18 @@ Proof.
                  specialize (H6 a r2).
                  right.
 
-              
+
 
             cbn in H0.
 
 
-            
+
           punfold H0.
           red in H0.
           rewrite x in H0.
           inversion H0; subst.
 
-        
+
         dependent induction REL.
         -- destruct e.
            ++ inversion n; subst.
@@ -4622,7 +4952,7 @@ Proof.
              pstep. red.
              cbn.
              eapply Rutt.EqTauL.
-             eauto.             
+             eauto.
            }
            forward IHRUN; auto.
 
@@ -4665,14 +4995,14 @@ Proof.
            forward IHRUN; auto.
 
            punfold IHRUN.
-        -- 
+        --
 
            red in IHRUN.
            cbn in IHRUN.
-           
+
            forward IHREL; auto.
            punfold IHREL.
-           
+
            red in REL.
            inversion REL; subst.
            destruct H1 as [[R1 R3] | [R1 R3]]; subst; auto.
@@ -4688,12 +5018,12 @@ Proof.
            forward IHREL; auto.
            forward IHREL; auto.
            punfold IHREL.
-           
+
            red in REL.
            inversion REL; subst.
            destruct H1 as [[R1 R3] | [R1 R3]]; subst; auto.
            destruct
-    
+
     pinversion REL.
     - (* Both t_nat and t_bool were ret nodes
 
@@ -4790,7 +5120,7 @@ Proof.
 
     (* I want to know that the generated tree refines `t_nat`...
 
-       
+
      *)
     punfold REL.
     red in REL.
@@ -4870,11 +5200,11 @@ Proof.
         { (* Ret *)
           eapply rutt_inv_Ret_r in H'.
           destruct H' as [r1 [H' NB]].
-          
+
           eapply paco2_mon_bot; eauto.
           rewrite H'.
 
-          specialize (IHRUN (Ret r1) 
+          specialize (IHRUN (Ret r1)
           eapply IHRUN.
           rewrite tau_eutt.
 
@@ -4899,12 +5229,12 @@ Proof.
           pfold.
           red.
           apply H1.
-          
+
           apply H in H0.
           eapply interp_prop_eutt_Proper.
           eapply interp_prop_Proper_R3.
           pstep; red; cbn.
-          
+
           rewrite H'.
           punfold H'. red in H'.
           cbn in *.
@@ -4917,9 +5247,9 @@ Proof.
         }
 
         { (* Vis *)
-          
+
         }
-        
+
         { setoid_rewrite Hm2 in RUN.
           inversion RUN; subst.
           + punfold H'; red in H'.
@@ -4991,7 +5321,7 @@ Proof.
                constructor; auto.
                destruct H as [[R1 R3] | [R1 R3]]; subst; cbn; auto.
 
-            -- 
+            --
 
             pstep; red; cbn.
             constructor; auto.
@@ -5051,7 +5381,7 @@ Proof.
               pstep; red; cbn.
               auto.
 
-            + 
+            +
 
             eapply IHRUN; eauto.
         }
@@ -5084,7 +5414,7 @@ Proof.
 
         { (* Tau *)
           apply rutt_inv_Tau_l in H'.
-          eapply 
+          eapply
           eapply IHRUN; eauto.
           punfold H'; red in H'; cbn in H'.
           dependent induction H'.
@@ -5105,7 +5435,7 @@ Proof.
           pstep; red; cbn.
           constructor; eauto.
 
-          specialize 
+          specialize
 
           rewrite <- Hm1.
           eapply IHRUN.
@@ -5141,18 +5471,18 @@ Proof.
           - eapply IHRUN; eauto.
 
         }
-    
+
 
           pstep; red; cbn.
           constructor; auto.
           cbn.
           punfold H'.
           red in H'.
-          
-          
+
+
           dependent induction H'.
           + inversion HeqM2; subst.
-            rewrite <- 
+            rewrite <-
 
             destruct H as [[R1 R3] | [R1 R3]]; subst; auto.
           + forward IHRUN; auto.
@@ -5166,13 +5496,13 @@ Proof.
 
             punfold IHRUN.
 
-          - 
+          -
 
         }
 
         inversion HeqM2; subst.
         eapply IHRUN.
-        
+
         rewrite (itree_eta m1) in Hrutt.
         desobs m1 Hm1; clear m1 Hm1.
         pclearbot.
@@ -5183,11 +5513,11 @@ Proof.
            constructor; auto.
 
            inversion H'; subst.
-           ++ 
-           
-           
+           ++
+
+
         eapply IHRUN; eauto.
-        
+
     - admit.
     - pstep. red.
       cbn.
@@ -5206,13 +5536,13 @@ Proof.
 
       forward IHREL; auto.
   }
-      
+
       forward IHREL; auto.
       forward IHREL; auto.
       punfold IHREL.
-      
 
-    
+
+
     dependent induction ot_bool2.
     - punfold RUN; red in RUN.
       cbn in RUN.
@@ -5265,7 +5595,7 @@ Proof.
              pstep. red.
              cbn.
              eapply Rutt.EqTauL.
-             eauto.             
+             eauto.
            }
            forward IHRUN; auto.
 
@@ -5329,18 +5659,18 @@ Proof.
                  specialize (H6 a r2).
                  right.
 
-              
+
 
             cbn in H0.
 
 
-            
+
           punfold H0.
           red in H0.
           rewrite x in H0.
           inversion H0; subst.
 
-        
+
         dependent induction REL.
         -- destruct e.
            ++ inversion n; subst.
@@ -5385,7 +5715,7 @@ Proof.
              pstep. red.
              cbn.
              eapply Rutt.EqTauL.
-             eauto.             
+             eauto.
            }
            forward IHRUN; auto.
 
@@ -5428,14 +5758,14 @@ Proof.
            forward IHRUN; auto.
 
            punfold IHRUN.
-        -- 
+        --
 
            red in IHRUN.
            cbn in IHRUN.
-           
+
            forward IHREL; auto.
            punfold IHREL.
-           
+
            red in REL.
            inversion REL; subst.
            destruct H1 as [[R1 R3] | [R1 R3]]; subst; auto.
@@ -5451,12 +5781,12 @@ Proof.
            forward IHREL; auto.
            forward IHREL; auto.
            punfold IHREL.
-           
+
            red in REL.
            inversion REL; subst.
            destruct H1 as [[R1 R3] | [R1 R3]]; subst; auto.
            destruct
-    
+
     pinversion REL.
     - (* Both t_nat and t_bool were ret nodes
 
@@ -5540,9 +5870,9 @@ Proof.
 
     (* I want to know that the generated tree refines `t_nat`...
 
-       
+
      *)
-    
+
     pinversion REL.
     - (* Both t_nat and t_bool were ret nodes
 
@@ -5614,7 +5944,7 @@ Proof.
         constructor; auto.
         eapply IHRUN; eauto.
 
-        
+
         right.
         eapply CIH; eauto.
 
@@ -5631,7 +5961,7 @@ Proof.
         cbn.
         punfold RUN2.
 
-        
+
 
         unfold get_nat_tree'.
 
@@ -5671,7 +6001,7 @@ Proof.
 (*          - Anything (TauL) *)
 (*        *)
 
-      
+
       punfold RUN. red in RUN.
       setoid_rewrite <- H0 in RUN.
       setoid_rewrite (itree_eta_ t_bool2).
@@ -5806,7 +6136,7 @@ Proof.
       admit.
       + admit.
       +
-          
+
       + (* Tau *)
         pstep.
         red.
@@ -5822,7 +6152,7 @@ Proof.
         constructor; auto.
         specialize (IHRUN CIH _ REL').
         forward IHRUN.
-        
+
 
         (* RUN : interp_PropTF nondetE_handle eq true true (upaco2 (interp_PropT_ nondetE_handle eq true true) bot2) (TauF m2) otb2 *)
 
@@ -5835,7 +6165,7 @@ Proof.
 (*               | Interp_PropT_TauL : forall (t1 : itree E R1) (t2 : itree' F R2), *)
 (*                 is_true b1 -> interp_PropTF h_spec RR b1 b2 sim (observe t1) t2 -> interp_PropTF h_spec RR b1 b2 sim (TauF t1) t2 *)
 
-              
+
 (*             *)
 
         -- apply REL'.
@@ -5889,21 +6219,21 @@ Proof.
     induction ot_nat, ot_bool;
       intros REL ot_bool2 RUN CIH.
 
-    - 
-    
+    -
+
     intros ot_nat ot_bool REL ot_bool2 RUN.
-    
+
 
     pstep.
     red.
     cbn.
 
-    
+
     pinversion RUN.
 
   }
 
-  
+
 
 
   induction ot_nat.
@@ -5966,16 +6296,16 @@ exists (ret r).
          constructor.
 
          constructor.
-         auto.      
+         auto.
     red in RUN.
     red in RUN.
     red in RUN.
     pinversion RUN; subst; cbn in *.
-    
+
 
   intros ot_nat ot_bool REL.
   dependent induction REL.
-  
+
   punfold REL.
   punfold RUN.
   red in RUN, REL.
@@ -6003,7 +6333,7 @@ with
         | _ => _
         end
       ).
-    
+
     pattern RUN.
 
 
@@ -6020,15 +6350,15 @@ with
       punfold REL.
       red in REL.
 
-    
+
     remember (get_na
 t_tree t_nat t_bool REL t_bool2 RUN) as t.
     destruct t.
     pstep. red.
     punfold RUN.
-    remember 
+    remember
     revert RUN HeqRUN2.
-    
+
     punfold RUN2.
     pinversion RUN2.
 
@@ -6071,7 +6401,7 @@ t_tree t_nat t_bool REL t_bool2 RUN) as t.
 
            because REL depends on t_nat and t_bool, and RUN depends on t_bool and t_bool2.
          *)
-        setoid_rewrite (itree_eta_ t_nat). t_nat_eta        
+        setoid_rewrite (itree_eta_ t_nat). t_nat_eta
         replace t_nat with ({| _observe := observe t_nat |}).
 
         unfold get_nat_tree.
@@ -6144,7 +6474,7 @@ Proof.
          - Anything (TauL)
        *)
 
-      
+
       punfold RUN. red in RUN.
       setoid_rewrite <- H0 in RUN.
       setoid_rewrite (itree_eta_ t_bool2).
@@ -6191,7 +6521,7 @@ pstep. red.
         pclearbot.
         eapply CIH; eauto.
   }
-  
+
   exists (get_nat_tree t_nat t_bool REL t_bool2 RUN).
   split.
   { revert RUN.
