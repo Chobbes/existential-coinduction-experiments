@@ -676,8 +676,22 @@ Proof.
       + pstep; red; cbn.
         constructor; auto.
 
+        rewrite (itree_eta_ m2) in H.
+        rewrite (itree_eta_ m2) in RUN.
+        genobs m2 om2.
+        setoid_rewrite <- Heqom2 in HS.
+        clear Heqom2.
+        clear m2.
         induction HS; subst.
-        -- remember (TauF m2) as M2.
+        -- inversion RUN; subst.
+           cbn in *.
+           inversion HS; subst.
+
+           pclearbot.
+           punfold H.
+           red in H.
+
+          remember (TauF m2) as M2.
            revert m1 m2 H HeqM2.
            induction RUN; intros m1 m2 H' HeqM2; try discriminate.
            { specialize (EQ t2).
@@ -801,7 +815,8 @@ Proof.
                          eapply HK.
                    }
 
-                   { destruct b.
+                   { (* Regular events *)
+                     destruct b.
                      rename H1 into NB.
 
                      red in H.
@@ -987,7 +1002,81 @@ Proof.
         -- eapply IHHS; eauto.
         -- specialize (EQ t2).
            contradiction.
-        -- admit.
+        -- remember (TauF m2) as M2.
+           revert m1 m2 H HeqM2.
+           dependent induction RUN; intros m1 m2 H' HeqM2; try discriminate;
+             try solve [exfalso; eapply EQ; eauto].
+
+           { inversion HeqM2; subst.
+             desobs t2 Ht2.
+             desobs m1 Hm1.
+             - 
+               2: {
+                 exfalso; eapply EQ; eauto.
+               }
+               2: {
+                 exfalso.
+                 destruct e; try destruct n; cbn in H0.
+                 - destruct H0; subst;
+                     setoid_rewrite bind_ret_l in H1.
+                   + 
+               }
+             
+             destruct e; try destruct n; cbn in H0.
+
+             try destruct n; try destruct n0; cbn in H1; try inversion H1.
+             
+             punfold H1. red in H1.
+             dependent induction H1;
+               try rewrite <- x0.
+           }
+             eapply IHRUN. eauto.
+             desobs m2 Hm2.
+
+             - clear IHRUN.
+               pclearbot.
+
+               setoid_rewrite Hm2 in RUN.
+               inversion RUN; subst.
+               + punfold H'. red in H'.
+                 rewrite Hm2 in H'.
+                 dependent induction H'.
+                 * rewrite <- x.
+                   cbn.
+                   constructor.
+                   destruct H as [[R1 R3] | [R1 R3]]; subst; auto.
+                 * rewrite <- x.
+                   constructor; cbn; auto.
+               + specialize (EQ t0).
+                 contradiction.
+             - 
+
+           }
+             
+             red in H0.
+
+          punfold H1. red in H1.
+           { dependent induction H1;
+               try solve [rewrite <- x0 in EQ; exfalso; eapply EQ; eauto];
+               try rewrite <- x0;
+               try rewrite <- x0 in RUN.
+
+             - admit.
+             - admit.
+             - rewrite <- x in EQ.
+               specialize (EQ t1); contradiction.
+             - 
+
+             - rewrite <- x0.
+               rewrite <- x0 in RUN.
+
+               cbn.
+               admit.
+             - 
+
+           }
+
+             
       + 
 
            cbn. constructor; auto.
