@@ -722,15 +722,16 @@ Proof.
                  rewrite Hm2 in H'.
                  dependent induction H'.
                  * rewrite <- x.
+
+                   rename H0 into VIS_HANDLED.
+                   rename H2 into K_RUTT.
+
                    destruct e, e1; try destruct n; try destruct n0; cbn in H1; try inversion H1.
 
                    { (* Nondeterminism events *)
                      red in H.
                      destruct H.
                      - (* True *)
-                       rename H0 into VIS_HANDLED.
-                       rename H2 into K_RUTT.
-
                        subst.
                        setoid_rewrite bind_ret_l in VIS_HANDLED.
 
@@ -765,9 +766,6 @@ Proof.
                        + repeat rewrite <- itree_eta_.
                          eapply HK.
                      - (* False *)
-                       rename H0 into VIS_HANDLED.
-                       rename H2 into K_RUTT.
-
                        subst.
                        setoid_rewrite bind_ret_l in VIS_HANDLED.
 
@@ -803,7 +801,243 @@ Proof.
                          eapply HK.
                    }
 
-                   {
+                   { destruct b.
+                     rename H1 into NB.
+
+                     red in H.
+                     rewrite H in VIS_HANDLED.
+
+                     setoid_rewrite bind_trigger in VIS_HANDLED.
+                     punfold VIS_HANDLED. red in VIS_HANDLED.
+                     cbn in VIS_HANDLED.
+                     dependent induction VIS_HANDLED.
+                     { rewrite <- x.
+
+                       eapply Interp_PropT_Vis with (k2:=(fun n0 : nat =>
+                                                            get_nat_tree' (k2 (if Nat.eqb n0 0 then false else if Nat.eqb n0 1 then true else false)))).
+                       2: {
+                         red.
+                         reflexivity.
+                       }
+                       2: {
+                         cbn.
+                         setoid_rewrite bind_trigger.
+                         pstep; red; cbn.
+
+                         destruct NB as [[R1 R3] | [R1 R3]]; subst; auto.
+                         - constructor.
+                           intros v.
+                           red.
+                           specialize (REL (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false)).
+                           red in REL.
+                           pclearbot.
+                           assert (k0 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false) ≈ k2 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false)) as K0K2.
+                           { eapply REL.
+                           }
+
+                           setoid_rewrite H in HK.
+
+                           destruct v; [| destruct v]; cbn in *.
+                           + repeat (rewrite <- itree_eta_).
+                             specialize (HK false).
+                             forward HK.
+                             { eapply ReturnsVis.
+                               unfold ITree.trigger.
+                               reflexivity.
+                               constructor. reflexivity.
+                             }
+                             pclearbot.
+                             left.
+                             setoid_rewrite K0K2.
+                             assert ((get_nat_tree' (k2 false)) ≈ (get_nat_tree' (k2 false))).
+                             reflexivity.
+                             eauto.
+                           + repeat (rewrite <- itree_eta_).
+                             specialize (HK true).
+                             forward HK.
+                             { eapply ReturnsVis.
+                               unfold ITree.trigger.
+                               reflexivity.
+                               constructor. reflexivity.
+                             }
+                             pclearbot.
+                             left.
+                             setoid_rewrite K0K2.
+                             assert ((get_nat_tree' (k2 true)) ≈ (get_nat_tree' (k2 true))).
+                             reflexivity.
+                             eauto.
+                             + (* Bogus case *)
+                               repeat (rewrite <- itree_eta_).
+                               specialize (HK false).
+                               forward HK.
+                               { eapply ReturnsVis.
+                                 unfold ITree.trigger.
+                                 reflexivity.
+                                 constructor. reflexivity.
+                               }
+                               pclearbot.
+                               left.
+                               setoid_rewrite K0K2.
+                               assert ((get_nat_tree' (k2 false)) ≈ (get_nat_tree' (k2 false))).
+                               reflexivity.
+                               eauto.
+                         - constructor.
+                           intros v.
+                           red.
+                           specialize (REL (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false)).
+                           red in REL.
+                           pclearbot.
+                           assert (k0 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false) ≈ k2 (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false)) as K0K2.
+                           { eapply REL.
+                           }
+
+                           setoid_rewrite H in HK.
+
+                           destruct v; [| destruct v]; cbn in *.
+                           + repeat (rewrite <- itree_eta_).
+                             specialize (HK false).
+                             forward HK.
+                             { eapply ReturnsVis.
+                               unfold ITree.trigger.
+                               reflexivity.
+                               constructor. reflexivity.
+                             }
+                             pclearbot.
+                             left.
+                             setoid_rewrite K0K2.
+                             assert ((get_nat_tree' (k2 false)) ≈ (get_nat_tree' (k2 false))).
+                             reflexivity.
+                             eauto.
+                           + repeat (rewrite <- itree_eta_).
+                             specialize (HK true).
+                             forward HK.
+                             { eapply ReturnsVis.
+                               unfold ITree.trigger.
+                               reflexivity.
+                               constructor. reflexivity.
+                             }
+                             pclearbot.
+                             left.
+                             setoid_rewrite K0K2.
+                             assert ((get_nat_tree' (k2 true)) ≈ (get_nat_tree' (k2 true))).
+                             reflexivity.
+                             eauto.
+                             + (* Bogus case *)
+                               repeat (rewrite <- itree_eta_).
+                               specialize (HK false).
+                               forward HK.
+                               { eapply ReturnsVis.
+                                 unfold ITree.trigger.
+                                 reflexivity.
+                                 constructor. reflexivity.
+                               }
+                               pclearbot.
+                               left.
+                               setoid_rewrite K0K2.
+                               assert ((get_nat_tree' (k2 false)) ≈ (get_nat_tree' (k2 false))).
+                               reflexivity.
+                               eauto.
+                       }
+
+                       intros a RET.
+                       specialize (K_RUTT a (if Nat.eqb a 0 then false else if Nat.eqb a 1 then true else false)).
+                       forward K_RUTT.
+                       cbn; auto.
+
+                       specialize (HK (if Nat.eqb a 0 then false else if Nat.eqb a 1 then true else false)).
+                       rewrite H in HK.
+                       forward HK.
+                       { eapply ReturnsVis.
+                         unfold ITree.trigger.
+                         reflexivity.
+                         cbn.
+                         constructor.
+                         reflexivity.
+                       }
+
+                       right.
+                       rewrite (itree_eta_ (k1 a)).
+                       rewrite (itree_eta_ (k2 _)).
+                       pclearbot.
+                       eapply CIH;
+                         repeat rewrite <- itree_eta_.
+
+                       eapply K_RUTT.
+                       red.
+                       eapply HK.
+                     }
+
+                     { rewrite <- x in EQ.
+                       specialize (EQ t1).
+                       contradiction.
+                     }
+                   }
+                 * rewrite <- x.
+                   constructor; auto.
+
+                   eapply IHH'; eauto.
+           }
+
+           { specialize (EQ t2).
+             contradiction.
+           }
+
+        -- specialize (EQ t2).
+           contradiction.
+        -- eapply IHHS; eauto.
+        -- specialize (EQ t2).
+           contradiction.
+        -- admit.
+      + 
+
+           cbn. constructor; auto.
+           eapply IHHS; eauto.
+           constructor; auto.
+           eauto.
+
+                       destruct a; [|destruct a].
+                       - cbn in *.
+
+
+                         constructor.
+
+                       pclearbot.
+                       left.
+                       eapply paco2_mon_bot; eauto.
+                       eapply K_RUTT.
+                       eapply K_RUTT.
+                       left.
+
+                       
+                       destruct a.
+                       - cbn.
+
+                               eapply HK.
+
+                           setoid_rewrite <- K0K2.
+
+
+                           reflexivity.
+
+                       }
+                       cbn.
+                     }
+
+                     { rewrite <- x in EQ.
+                       specialize (EQ t1).
+                       contradiction.
+                     }
+
+
+
+
+                     2: {
+                       red. reflexivity.
+                     }
+                     2: {
+                       setoid_rewrite bind_trigger.
+                       rewrite <- VIS_HANDLED.
+                     }
 
                    }
 
