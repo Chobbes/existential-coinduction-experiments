@@ -486,21 +486,65 @@ Defined.
 
 Import Morphisms.
 
+Require Import Coq.Program.Equality.
+
 #[global] Instance get_nat_tree'_Proper :
   Proper (eutt eq ==> eutt eq) get_nat_tree'.
 Proof.
   unfold Proper, respectful.
   intros x y EQ.
-  rewrite (itree_eta x) in EQ.
-  ginit. gcofix CIH.
+  rewrite (itree_eta_ x) in *.
+  rewrite (itree_eta_ y) in *.
+  genobs x ox.
+  genobs y oy.
+  clear x Heqox y Heqoy.
+  revert ox oy EQ.
+  pcofix CIH.
+  intros ox oy EQ.
+  punfold EQ. red in EQ. cbn in EQ.
+  dependent induction EQ.
+  - (* Ret Ret *)
+    subst.
+    pstep; red; cbn.
+    constructor; auto.
+  - (* Tau Tau *)
+    pstep; red; cbn.
+    constructor.
+    right.
+    rewrite (itree_eta_ m1).
+    rewrite (itree_eta_ m2).
+    eapply CIH.
+    pclearbot.
+    repeat rewrite <- itree_eta_.
+    apply REL.
+  - (* Vis Vis *)
+    destruct e.
+    pstep; red; cbn.
+    constructor.
+    intros v.
+    red.
+    right.
+    rewrite (itree_eta_ (if Nat.eqb v 0 then k1 false else if Nat.eqb v 1 then k1 true else k1 false)).
+    rewrite (itree_eta_ (if Nat.eqb v 0 then k2 false else if Nat.eqb v 1 then k2 true else k2 false)).
+    eapply CIH.
+    repeat rewrite <- itree_eta_.
+    specialize (REL (if Nat.eqb v 0 then false else if Nat.eqb v 1 then true else false)).
+    red in REL.
+    pclearbot.
 
-  pinversion EQ; subst.
-  - gstep. red.
-Admitted.
+    destruct v; [| destruct v]; cbn in *;
+      apply REL.
+  - (* TauL *)
+    pstep; red; cbn.
+    constructor; auto.
+    punfold IHEQ.
+  - (* TauR *)
+    pstep; red; cbn.
+    constructor; auto.
+    punfold IHEQ.
+Qed.
 
 (** * Main Theorem *)
-
-Require Import Coq.Program.Equality.
 
 Ltac pdepdes H := punfold H; dependent destruction H; pclearbot.
 
