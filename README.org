@@ -15,7 +15,7 @@ to simulate the ~Bool~ language.
 
 In both of these languages we have non-deterministic events
 represented by ~Or~ events in the ~itree~. These events return a bool
-in each language.p
+in each language.
 
 The ~Nat~ language and ~Bool~ language ~itrees~ differ in their event
 structure because the ~Nat~ language has ~NatEvents~ and the ~Bool~
